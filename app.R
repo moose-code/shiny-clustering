@@ -22,19 +22,20 @@ imputated_data = predict(object = imputation_model,newdata=df[,-c(1,2)])
 # Adding country names to the rows
 rownames(imputated_data)<-df[,2] 
 
+#scaling data
 mydata.scaled<-scale(imputated_data)
 
+#princiapl componenets analysis
 pca.out<-prcomp(mydata.scaled)
 
+# Contributions to first two dimesions
 library(gridExtra)
 plot1 <- fviz_contrib(pca.out, choice="var", axes = 1, top = 19)
 plot2 <- fviz_contrib(pca.out, choice="var", axes = 2, top = 19, color = "lightgrey")
 
-#my_palette <- palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3","#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999"))
 
-#my_palette <- palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3","#FF7F00", "#FFFF33", "#A65628"))
+my_palette <- palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3","#FF7F00", "#FFFF33", "#A65628"))
 ### Shiny app starts here
-my_palette <- rainbow(7)
 
 # Define UI ----
 ui <- fluidPage( theme = shinytheme("superhero"),
@@ -43,7 +44,6 @@ ui <- fluidPage( theme = shinytheme("superhero"),
                  sidebarLayout(
                    
                    sidebarPanel(
-                     #h1("Cluster control"),
                      p("Use the controls below to change the appearance of the cluster plot"),
                      sliderInput("clusters", "Number of clusters",
                                  min = 2, max = 7, value = 3),
@@ -54,16 +54,14 @@ ui <- fluidPage( theme = shinytheme("superhero"),
                    ),
                    mainPanel(
                      h3("Countries in respective clusters"),
-                     plotOutput('plotClusters'),
-                     h3("World Map country plot"),
-                     plotOutput('plotMap')
+                     plotOutput('plotClusters')
                    )
                  )
 )
 # Define server logic ----
 server <- function(input, output, session) {
   
-  
+  # reactively recomputes the kmeans algorithm depending on the slider input
   clusters <- reactive({
     kmeans(mydata.scaled, input$clusters, nstart =50)
   })
@@ -90,20 +88,10 @@ server <- function(input, output, session) {
                  #labelsize = 0.3,
                  ggtheme = theme_minimal()
     )
+    # Used to scale the height for better proprtioning. This can probably be improved. 
   },height = function() {
-    session$clientData$output_plotClusters_width*0.5
+    session$clientData$output_plotClusters_width*0.71
   })
-  
-  output$plotMap <- renderPlot({
-
-    cluster = as.numeric(clusters()$cluster)
-    spdf = joinCountryData2Map(data.frame(cluster,df$CountryName), joinCode="NAME", nameJoinColumn="df.CountryName",verbose = TRUE,mapResolution = "low")
-    mapCountryData(spdf, nameColumnToPlot="cluster", catMethod="fixedWidth",colourPalette=my_palette, addLegend = FALSE, lwd = 0.5)
-    
-  },height = function() {
-    session$clientData$output_plotMap_width*0.5
-  })
-  
   
   
 }
